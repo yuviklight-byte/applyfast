@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>ApplyFast — AI Job Application Agent</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --surface2: #18181f;
+    --border: #2a2a38;
+    --accent: #7c6aff;
+    --accent2: #ff6a9b;
+    --green: #00e5a0;
+    --text: #f0efff;
+    --muted: #8888aa;
+    --radius: 12px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'DM Mono', monospace; min-height: 100vh; overflow-x: hidden; }
+  body::before {
+    content: ''; position: fixed; inset: 0;
+    background-image: linear-gradient(rgba(124,106,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(124,106,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px; pointer-events: none; z-index: 0;
+  }
+  .container { max-width: 860px; margin: 0 auto; padding: 40px 24px 80px; position: relative; z-index: 1; }
+  header { text-align: center; margin-bottom: 48px; padding-top: 20px; }
+  .logo-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: rgba(124,106,255,0.12); border: 1px solid rgba(124,106,255,0.3);
+    border-radius: 100px; padding: 6px 16px; font-size: 11px;
+    letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); margin-bottom: 20px;
+  }
+  h1 { font-family: 'Syne', sans-serif; font-size: clamp(38px, 7vw, 64px); font-weight: 800; line-height: 1; letter-spacing: -0.03em; margin-bottom: 14px; }
+  h1 .accent { color: var(--accent); }
+  .subtitle { color: var(--muted); font-size: 14px; line-height: 1.7; max-width: 480px; margin: 0 auto; }
+  .steps { display: flex; align-items: center; justify-content: center; margin-bottom: 36px; }
+  .step { display: flex; align-items: center; gap: 8px; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); transition: color 0.3s; }
+  .step.active { color: var(--text); }
+  .step.done { color: var(--green); }
+  .step-num { width: 28px; height: 28px; border-radius: 50%; border: 1.5px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 12px; transition: all 0.3s; }
+  .step.active .step-num { border-color: var(--accent); background: rgba(124,106,255,0.15); color: var(--accent); }
+  .step.done .step-num { border-color: var(--green); background: rgba(0,229,160,0.1); color: var(--green); }
+  .step-line { width: 40px; height: 1px; background: var(--border); margin: 0 8px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; margin-bottom: 16px; transition: border-color 0.3s; }
+  .card:focus-within { border-color: rgba(124,106,255,0.4); }
+  .card-title { font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700; margin-bottom: 18px; display: flex; align-items: center; gap: 10px; }
+  .card-title .icon { width: 30px; height: 30px; border-radius: 8px; background: rgba(124,106,255,0.12); display: flex; align-items: center; justify-content: center; font-size: 14px; }
+  label { display: block; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; margin-top: 16px; }
+  label:first-of-type { margin-top: 0; }
+  input, textarea { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: 'DM Mono', monospace; font-size: 13px; padding: 10px 14px; outline: none; transition: border-color 0.2s; resize: vertical; }
+  input::placeholder, textarea::placeholder { color: var(--muted); opacity: 0.6; }
+  input:focus, textarea:focus { border-color: rgba(124,106,255,0.5); background: rgba(124,106,255,0.04); }
+  textarea { min-height: 90px; }
+  .input-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px; letter-spacing: 0.04em; padding: 12px 24px; border-radius: 8px; border: none; cursor: pointer; transition: all 0.2s; }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover:not(:disabled) { background: #9080ff; transform: translateY(-1px); box-shadow: 0 8px 20px rgba(124,106,255,0.3); }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-secondary { background: var(--surface2); border: 1px solid var(--border); color: var(--text); }
+  .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-lg { padding: 15px 32px; font-size: 14px; width: 100%; }
+  #jobPreview { display: none; background: var(--surface2); border: 1px solid rgba(0,229,160,0.25); border-radius: var(--radius); padding: 20px; margin-top: 16px; }
+  #jobPreview.visible { display: block; }
+  .job-preview-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 18px; margin-bottom: 4px; }
+  .job-preview-company { color: var(--accent); font-size: 13px; margin-bottom: 12px; }
+  .job-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+  .tag { font-size: 11px; padding: 4px 10px; border-radius: 100px; background: rgba(124,106,255,0.1); border: 1px solid rgba(124,106,255,0.2); color: var(--accent); }
+  .tag.green { background: rgba(0,229,160,0.08); border-color: rgba(0,229,160,0.2); color: var(--green); }
+  .job-about { color: var(--muted); font-size: 12px; line-height: 1.6; }
+  .required-fields { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+  .required-fields-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 8px; }
+  #agentLog { display: none; background: #07070d; border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-top: 20px; font-size: 12px; line-height: 1.7; max-height: 320px; overflow-y: auto; }
+  #agentLog.visible { display: block; }
+  .log-entry { margin-bottom: 4px; }
+  .log-entry .ts { color: var(--muted); margin-right: 8px; }
+  .msg-navigate { color: #60bfff; }
+  .msg-action { color: var(--accent); }
+  .msg-complete { color: var(--green); }
+  .msg-error { color: #ff6a6a; }
+  .msg-info { color: var(--muted); }
+  #resultPanel { display: none; border-radius: var(--radius); padding: 28px; text-align: center; margin-top: 20px; }
+  #resultPanel.success { display: block; background: rgba(0,229,160,0.06); border: 1px solid rgba(0,229,160,0.25); }
+  #resultPanel.failed { display: block; background: rgba(255,106,106,0.06); border: 1px solid rgba(255,106,106,0.25); }
+  .result-icon { font-size: 48px; margin-bottom: 12px; }
+  .result-title { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 22px; margin-bottom: 8px; }
+  .result-msg { color: var(--muted); font-size: 13px; line-height: 1.6; }
+  .fields-filled { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-top: 14px; }
+  .spinner { width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.2); border-top-color: white; border-radius: 50%; animation: spin 0.7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .section { display: none; }
+  .section.visible { display: block; }
+  .scanning-bar { height: 2px; background: linear-gradient(90deg, transparent, var(--accent), transparent); background-size: 200% 100%; animation: scan 1.5s ease infinite; border-radius: 2px; margin-top: 8px; }
+  @keyframes scan { 0% { background-position: -100% 0; } 100% { background-position: 200% 0; } }
+  .divider { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
+  #toast { position: fixed; bottom: 30px; right: 30px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 20px; font-size: 13px; opacity: 0; transform: translateY(10px); transition: all 0.3s; z-index: 100; }
+  #toast.show { opacity: 1; transform: translateY(0); }
+  @media (max-width: 560px) { .input-row { grid-template-columns: 1fr; } .step-line { width: 20px; } }
+</style>
+</head>
+<body>
+<div id="toast"></div>
+<div class="container">
+  <header>
+    <div class="logo-badge">⚡ Powered by TinyFish Web Agent</div>
+    <h1>Apply<span class="accent">Fast</span></h1>
+    <p class="subtitle">Paste a job URL. Fill your details once. Let the AI agent navigate, fill, and submit the application — while you watch live.</p>
+  </header>
+
+  <div class="steps">
+    <div class="step active" id="s1"><div class="step-num">1</div><span>Job URL</span></div>
+    <div class="step-line"></div>
+    <div class="step" id="s2"><div class="step-num">2</div><span>Your Info</span></div>
+    <div class="step-line"></div>
+    <div class="step" id="s3"><div class="step-num">3</div><span>Apply</span></div>
+  </div>
+
+  <!-- STEP 1 -->
+  <div class="section visible" id="step1">
+    <div class="card">
+      <div class="card-title"><div class="icon">🔗</div>Paste Job Posting URL</div>
+      <label>Job Posting URL</label>
+      <input type="url" id="jobUrl" placeholder="https://jobs.lever.co/anthropic/..." />
+      <div id="scanningBar" style="display:none" class="scanning-bar"></div>
+      <div id="jobPreview">
+        <div class="job-preview-title" id="pvTitle">—</div>
+        <div class="job-preview-company" id="pvCompany">—</div>
+        <div class="job-tags" id="pvTags"></div>
+        <div class="job-about" id="pvAbout"></div>
+        <div class="required-fields">
+          <div class="required-fields-label">Fields agent will fill</div>
+          <div class="job-tags" id="pvFields"></div>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex; gap:12px; justify-content:flex-end; margin-top:8px;">
+      <button class="btn btn-secondary" id="btnAnalyze" onclick="analyzeJob()">🔍 Analyze Job Post</button>
+      <button class="btn btn-primary" id="btnToStep2" onclick="setStep(2)" disabled>Continue →</button>
+    </div>
+  </div>
+
+  <!-- STEP 2 -->
+  <div class="section" id="step2">
+    <div class="card">
+      <div class="card-title"><div class="icon">👤</div>Your Details</div>
+      <div class="input-row">
+        <div><label>Full Name *</label><input type="text" id="fullName" placeholder="Arjun Sharma" /></div>
+        <div><label>Email *</label><input type="email" id="email" placeholder="arjun@email.com" /></div>
+      </div>
+      <div class="input-row">
+        <div><label>Phone</label><input type="tel" id="phone" placeholder="+977 9801234567" /></div>
+        <div><label>Current Location</label><input type="text" id="location" placeholder="Kathmandu, Nepal" /></div>
+      </div>
+      <div class="input-row">
+        <div><label>LinkedIn URL</label><input type="url" id="linkedin" placeholder="https://linkedin.com/in/..." /></div>
+        <div><label>Portfolio / Website</label><input type="url" id="portfolio" placeholder="https://yoursite.com" /></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title"><div class="icon">🎓</div>Background</div>
+      <div class="input-row">
+        <div><label>Education</label><input type="text" id="education" placeholder="B.Sc. Computer Science, TU" /></div>
+        <div><label>Years of Experience</label><input type="text" id="experience" placeholder="2 years" /></div>
+      </div>
+      <label>Key Skills (comma separated)</label>
+      <input type="text" id="skills" placeholder="Python, React, Node.js, Machine Learning..." />
+    </div>
+    <div class="card">
+      <div class="card-title"><div class="icon">✍️</div>Cover Letter / Why You?</div>
+      <label>2–3 sentences on why you're a great fit</label>
+      <textarea id="coverLetter" placeholder="I'm passionate about building scalable products and have experience shipping features used by thousands of users..."></textarea>
+    </div>
+    <div style="display:flex; gap:12px; justify-content:space-between; margin-top:8px;">
+      <button class="btn btn-secondary" onclick="setStep(1)">← Back</button>
+      <button class="btn btn-primary" onclick="goToStep3()">Review & Apply →</button>
+    </div>
+  </div>
+
+  <!-- STEP 3 -->
+  <div class="section" id="step3">
+    <div class="card">
+      <div class="card-title"><div class="icon">🚀</div>Ready to Apply</div>
+      <div id="reviewSummary" style="font-size:13px; line-height:1.9; color:var(--muted);"></div>
+      <hr class="divider" />
+      <p style="font-size:12px; color:var(--muted); line-height:1.7; margin-bottom:18px;">
+        ⚠️ The TinyFish agent will open a real browser, navigate to the job page, and fill + submit the form automatically.
+      </p>
+      <button class="btn btn-primary btn-lg" id="btnApply" onclick="startApply()">⚡ Launch Agent & Apply Now</button>
+    </div>
+    <div id="agentLog">
+      <div style="font-size:11px; color:var(--muted); margin-bottom:10px; letter-spacing:0.08em; text-transform:uppercase;">⚡ Agent Live Log</div>
+      <div id="logEntries"></div>
+    </div>
+    <div id="resultPanel">
+      <div class="result-icon" id="resultIcon"></div>
+      <div class="result-title" id="resultTitle"></div>
+      <div class="result-msg" id="resultMsg"></div>
+      <div class="fields-filled" id="fieldsFilled"></div>
+    </div>
+    <div style="margin-top:16px;">
+      <button class="btn btn-secondary" onclick="setStep(2)">← Back</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  let jobData = null;
+
+  function showToast(msg, duration = 3000) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), duration);
+  }
+
+  function setStep(n) {
+    [1,2,3].forEach(i => {
+      document.getElementById(`step${i}`).classList.toggle('visible', i === n);
+      const el = document.getElementById(`s${i}`);
+      el.className = 'step' + (i < n ? ' done' : i === n ? ' active' : '');
+    });
+  }
+
+  async function callAgent(url, goal) {
+    const res = await fetch('/.netlify/functions/agent', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url, goal })
+    });
+    if (!res.ok) throw new Error(`API error: ${res.status}`);
+    return res.json();
+  }
+
+  async function analyzeJob() {
+    const url = document.getElementById('jobUrl').value.trim();
+    if (!url) { showToast('⚠️ Please enter a job URL'); return; }
+
+    const btn = document.getElementById('btnAnalyze');
+    btn.disabled = true;
+    btn.innerHTML = '<div class="spinner"></div> Analyzing...';
+    document.getElementById('scanningBar').style.display = 'block';
+    document.getElementById('jobPreview').classList.remove('visible');
+
+    try {
+      const data = await callAgent(url, `Analyze this job posting page and return ONLY a raw JSON object (no markdown, no backticks) with these fields:
+{
+  "jobTitle": "the job title",
+  "company": "company name",
+  "location": "job location or Remote",
+  "jobType": "full-time / part-time / internship / contract",
+  "requiredFields": ["form fields on the application e.g. name, email, phone, resume, cover letter, linkedin, github"],
+  "keyRequirements": ["top 3-5 skills from the job description"],
+  "aboutRole": "2 sentence summary of the role"
+}
+Return ONLY the raw JSON. No explanation, no backticks.`);
+
+      let parsed = null;
+      try {
+        const clean = (data.result || '').replace(/```json|```/g, '').trim();
+        parsed = JSON.parse(clean);
+      } catch {
+        const match = (data.result || data.raw || '').match(/\{[\s\S]*\}/);
+        try { parsed = match ? JSON.parse(match[0]) : null; } catch {}
+      }
+
+      // Always allow continuing even if parse fails
+      jobData = parsed || { jobTitle: 'Job Posting', company: '', requiredFields: ['name','email','phone','cover letter'], aboutRole: '' };
+      renderJobPreview(jobData);
+      document.getElementById('btnToStep2').disabled = false;
+      showToast('✅ Job analyzed!');
+
+    } catch (err) {
+      // Even on error, let user continue
+      jobData = { jobTitle: 'Job Posting', company: '', requiredFields: [], aboutRole: '' };
+      renderJobPreview(jobData);
+      document.getElementById('btnToStep2').disabled = false;
+      showToast('⚠️ Could not fully analyze — you can still continue');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '🔍 Analyze Job Post';
+      document.getElementById('scanningBar').style.display = 'none';
+    }
+  }
+
+  function renderJobPreview(data) {
+    document.getElementById('pvTitle').textContent = data.jobTitle || 'Role';
+    document.getElementById('pvCompany').textContent = data.company || '';
+    const tags = document.getElementById('pvTags');
+    tags.innerHTML = '';
+    if (data.location) tags.innerHTML += `<span class="tag">${data.location}</span>`;
+    if (data.jobType) tags.innerHTML += `<span class="tag">${data.jobType}</span>`;
+    document.getElementById('pvAbout').textContent = data.aboutRole || '';
+    const fields = document.getElementById('pvFields');
+    fields.innerHTML = '';
+    (data.requiredFields || []).forEach(f => fields.innerHTML += `<span class="tag">${f}</span>`);
+    document.getElementById('jobPreview').classList.add('visible');
+  }
+
+  function goToStep3() {
+    if (!document.getElementById('fullName').value.trim() || !document.getElementById('email').value.trim()) {
+      showToast('⚠️ Name and email are required'); return;
+    }
+    const jt = jobData?.jobTitle || 'this role';
+    const co = jobData?.company ? ` at ${jobData.company}` : '';
+    document.getElementById('reviewSummary').innerHTML = `
+      <div><span style="color:var(--text)">Applying to:</span> ${jt}${co}</div>
+      <div><span style="color:var(--text)">Name:</span> ${document.getElementById('fullName').value}</div>
+      <div><span style="color:var(--text)">Email:</span> ${document.getElementById('email').value}</div>
+      <div><span style="color:var(--text)">Phone:</span> ${document.getElementById('phone').value || '—'}</div>
+      <div><span style="color:var(--text)">Location:</span> ${document.getElementById('location').value || '—'}</div>
+      <div><span style="color:var(--text)">Experience:</span> ${document.getElementById('experience').value || '—'}</div>
+      <div><span style="color:var(--text)">Skills:</span> ${document.getElementById('skills').value || '—'}</div>`;
+    setStep(3);
+  }
+
+  function addLog(type, message) {
+    const log = document.getElementById('agentLog');
+    log.classList.add('visible');
+    const now = new Date().toLocaleTimeString();
+    document.getElementById('logEntries').innerHTML +=
+      `<div class="log-entry"><span class="ts">[${now}]</span><span class="msg-${type}">${message}</span></div>`;
+    log.scrollTop = log.scrollHeight;
+  }
+
+  async function startApply() {
+    const jobUrl = document.getElementById('jobUrl').value.trim();
+    const btn = document.getElementById('btnApply');
+    btn.disabled = true;
+    btn.innerHTML = '<div class="spinner"></div> Agent Running...';
+    document.getElementById('resultPanel').className = '';
+    document.getElementById('logEntries').innerHTML = '';
+
+    const d = {
+      fullName: document.getElementById('fullName').value,
+      email: document.getElementById('email').value,
+      phone: document.getElementById('phone').value,
+      linkedin: document.getElementById('linkedin').value,
+      portfolio: document.getElementById('portfolio').value,
+      experience: document.getElementById('experience').value,
+      location: document.getElementById('location').value,
+      education: document.getElementById('education').value,
+      skills: document.getElementById('skills').value,
+      coverLetter: document.getElementById('coverLetter').value,
+    };
+
+    addLog('info', 'Initializing TinyFish Web Agent...');
+    addLog('navigate', `Opening: ${jobUrl}`);
+
+    const goal = `You are a job application assistant. Fill out and submit the job application form on this page.
+
+Applicant details:
+- Full Name: ${d.fullName}
+- Email: ${d.email}
+- Phone: ${d.phone || 'not provided'}
+- LinkedIn: ${d.linkedin || 'not provided'}
+- Portfolio: ${d.portfolio || 'not provided'}
+- Years of Experience: ${d.experience || 'not provided'}
+- Location: ${d.location || 'not provided'}
+- Education: ${d.education || 'not provided'}
+- Skills: ${d.skills || 'not provided'}
+
+Cover Letter:
+${d.coverLetter || 'Excited to apply and contribute to the team.'}
+
+Steps:
+1. Find the application form on this page
+2. Fill every text field with the matching info above
+3. For dropdowns, pick the best option
+4. Skip file upload fields (no file available)
+5. Submit the form
+6. Return ONLY this JSON (no markdown): {"status":"submitted","message":"one sentence summary","fieldsFilledIn":["field1","field2"]}`;
+
+    try {
+      addLog('action', 'Agent navigating and filling form fields...');
+      const data = await callAgent(jobUrl, goal);
+
+      addLog('complete', '✅ Agent finished!');
+
+      let parsed = null;
+      try {
+        const match = (data.result || data.raw || '').match(/\{[\s\S]*\}/);
+        parsed = match ? JSON.parse(match[0]) : null;
+      } catch {}
+
+      const isSuccess = parsed?.status === 'submitted';
+      const panel = document.getElementById('resultPanel');
+      panel.className = isSuccess ? 'success' : 'failed';
+      document.getElementById('resultIcon').textContent = isSuccess ? '🎉' : '⚠️';
+      document.getElementById('resultTitle').textContent = isSuccess ? 'Application Submitted!' : 'Agent Ran — Check Results';
+      document.getElementById('resultMsg').textContent = parsed?.message || (data.result || '').slice(0, 200) || 'Check the log above for details.';
+
+      const ff = document.getElementById('fieldsFilled');
+      ff.innerHTML = '';
+      (parsed?.fieldsFilledIn || []).forEach(f => ff.innerHTML += `<span class="tag green">${f}</span>`);
+
+    } catch (err) {
+      addLog('error', 'Error: ' + err.message);
+      showToast('❌ ' + err.message);
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '⚡ Launch Agent & Apply Now';
+    }
+  }
+</script>
+</body>
+</html>
